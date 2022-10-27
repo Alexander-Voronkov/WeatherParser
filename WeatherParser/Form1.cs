@@ -28,8 +28,10 @@ namespace WeatherParser
             InitializeComponent();
             LoadCities();
             textBox1.Enabled = false;
+            comboBox2.Sorted = true;
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox2.SelectedIndex = 0;
         }
 
         private void LoadCities()
@@ -86,8 +88,6 @@ namespace WeatherParser
                     comboBox2.Items.Add(item.Country);
             }
             this.Enabled = true;
-            comboBox2.SelectedIndex = 0;
-            comboBox1.SelectedIndex = 0;
         }
 
         private void button1_Click(object sender, EventArgs e)
