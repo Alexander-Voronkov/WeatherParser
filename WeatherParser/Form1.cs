@@ -13,6 +13,8 @@ using System.IO;
 using Newtonsoft.Json;
 using System.IO.Compression;
 using System.Diagnostics;
+using System.Threading;
+using System.Security.Cryptography;
 
 namespace WeatherParser
 {
@@ -24,35 +26,15 @@ namespace WeatherParser
         public Form1()
         {
             InitializeComponent();
-            Task.Run(()=>LoadCities());
+            LoadCities();
             textBox1.Enabled = false;
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
         }
 
-        private void Save()
-        {
-            if (cities.Count > 0)
-            {
-                this.progressBar1.Visible = true;
-                this.progressBar1.Style = ProgressBarStyle.Marquee;
-                File.WriteAllText("cities.json", JsonConvert.SerializeObject(this.cities));
-                this.progressBar1.Visible = false;
-            }
-        }
-
         private void LoadCities()
         {
-            if (InvokeRequired)
-            {
-                
-                Invoke(new Action(() => { this.Enabled = false; progressBar1.Style = ProgressBarStyle.Marquee; }));
-            }
-            else
-            {
-                this.Enabled = false;
-                progressBar1.Style = ProgressBarStyle.Marquee;
-            }
+            this.Enabled = false;
             if (File.Exists("cities.json"))
             {
                 cities = JsonConvert.DeserializeObject<List<CityInfo>>(File.ReadAllText("cities.json")); 
@@ -79,48 +61,33 @@ namespace WeatherParser
                     this.Close();
                     return;
                 }
-                Process proc = Process.Start("WinRAR.exe", $"e \"cities.gz\" {Environment.CurrentDirectory}");
+                using(var stream = new GZipStream(File.OpenRead("cities.gz"), CompressionMode.Decompress))
+                {
+                    using (var sw = new BinaryWriter(File.OpenWrite("cities.json")))
+                    {
+                        int bytes = 1;
+                        while (bytes>0)
+                        {
+                            byte[] buff = new byte[256];
+                            bytes = stream.Read(buff, 0, 256);
+                            sw.Write(buff, 0, bytes);
+                        }
+                    }
+                }
                 File.Delete("cities.gz");
 
-                this.cities = JsonConvert.DeserializeObject<List<CityInfo>>(File.ReadAllText("city.list.json"));
-
-                File.Delete("city.list.json");
+                this.cities = JsonConvert.DeserializeObject<List<CityInfo>>(File.ReadAllText("cities.json"));
             }
-            Action<CityInfo> a= (obj) =>
-            {
-                comboBox1.Items.Add(obj.City);
-                if (!comboBox2.Items.Contains(obj.Country))
-                    comboBox2.Items.Add(obj.Country);
-            };
+
             foreach (CityInfo item in this.cities)
             {
-                if (InvokeRequired)
-                {
-                    this.Invoke((MethodInvoker)(()=>a(item)));
-                }
-                else
-                {
-                    comboBox1.Items.Add(item.City);
-                    if (!comboBox2.Items.Contains(item.Country))
-                        comboBox2.Items.Add(item.Country);
-                }                
+                comboBox1.Items.Add(item.City);
+                if (!comboBox2.Items.Contains(item.Country))
+                    comboBox2.Items.Add(item.Country);
             }
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => { 
-                    progressBar1.Visible = false;
-                    this.Enabled = true;
-                    comboBox2.SelectedIndex = 0;
-                    comboBox1.SelectedIndex = 0;
-                }));
-            }
-            else
-            {
-                progressBar1.Visible = false;
-                this.Enabled = true;
-                comboBox2.SelectedIndex = 0;
-                comboBox1.SelectedIndex = 0;
-            }
+            this.Enabled = true;
+            comboBox2.SelectedIndex = 0;
+            comboBox1.SelectedIndex = 0;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -156,11 +123,6 @@ namespace WeatherParser
                 }
             }
             comboBox1.SelectedIndex = 0;
-        }
-
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            Save();
         }
     }
 
