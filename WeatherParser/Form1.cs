@@ -69,7 +69,16 @@ namespace WeatherParser
 
                 WebClient webClient = new WebClient();
 
-                webClient.DownloadFile(cities, "cities.gz");
+                try
+                {
+                    webClient.DownloadFile(cities, "cities.gz");
+                }
+                catch(Exception e)
+                {
+                    MessageBox.Show(e.Message + "Your internet is slow. Reconnect and try again.");
+                    this.Close();
+                    return;
+                }
                 Process proc = Process.Start("WinRAR.exe", $"e \"cities.gz\" {Environment.CurrentDirectory}");
                 File.Delete("cities.gz");
 
